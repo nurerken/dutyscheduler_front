@@ -1,0 +1,9 @@
+.dutydate{background-color: #006699; color: white;}
+.idle{background-color: white;}
+.mainduty{background-color: red;}
+.secondduty{background-color: yellow;}
+.vacation{background-color: grey;}
+.invisible{color: transparent;}
+.mainDutyMenu{background-color: red; width: 2px;}
+.secondDutyMenu{background-color: yellow; width: 2px;}
+.vacationMenu{background-color: grey; width: 2px;}
