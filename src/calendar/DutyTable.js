@@ -15,6 +15,7 @@ import ServerError from '../common/ServerError';
 import {Link, withRouter } from 'react-router-dom';
 import './DutyTable.css';
 import { Layout, Menu, Dropdown, Icon, Select, Button, notification, Input} from 'antd';
+import { ACCESS_TOKEN } from '../constants';
 
 import Modal from "react-responsive-modal";
 
@@ -55,7 +56,6 @@ class DutyTable extends Component {
             });
 
         }).catch(error => {
-
             if(error.status === 404) {
                 this.setState({
                     notFound: true,
@@ -67,6 +67,13 @@ class DutyTable extends Component {
                     notAuthenticated: true,
                     isLoading: false
                 });        
+            }
+            else if(error == 'SyntaxError: Unexpected end of JSON input'){
+              this.setState({
+                    notAuthenticated: true,
+                    isLoading: false
+                });  
+                localStorage.removeItem(ACCESS_TOKEN);      
             }
             else {                
                 this.setState({
@@ -104,14 +111,14 @@ class DutyTable extends Component {
       return <LoadingIndicator />;
     }
 
-    if(this.state.notAuthenticated) {
+    /*if(this.state.notAuthenticated) {
       return (
         <div>
           Вы не авторизованы. Необходимо 
           <Link to="/login"> войти в систему</Link>
         </div>
       );
-    }
+    }*/
 
     if(this.state.notFound) {
       return <NotFound />;
