@@ -3,6 +3,7 @@ import { getDutyItems } from '../util/APIUtils';
 import { createDutyItem } from '../util/APIUtils';
 import { getDutyComments } from '../util/APIUtils';
 import { createComment } from '../util/APIUtils';
+import { getUserInfo } from '../util/APIUtils';
 import { formatDate } from '../util/Helpers';
 import LoadingIndicator  from '../common/LoadingIndicator';
 import NotFound from '../common/NotFound';
@@ -15,8 +16,8 @@ import ServerError from '../common/ServerError';
 import {Link, withRouter } from 'react-router-dom';
 import './DutyTable.css';
 import { Layout, Menu, Dropdown, Icon, Select, Button, notification, Input} from 'antd';
-import { ACCESS_TOKEN } from '../constants';
 
+import { API_BASE_URL, ACCESS_TOKEN } from '../constants';
 import Modal from "react-responsive-modal";
 
 const Option = Select.Option;
@@ -51,7 +52,7 @@ class DutyTable extends Component {
             const weeks = this.state.weeks.slice();
             this.setState({
                 weeks: weeks.concat(response.weeks),
-                calendars: response.calendars,                
+                calendars: response.calendars,  
                 isLoading: false
             });
 
@@ -176,6 +177,9 @@ class DutyTable extends Component {
                 {calOptions}
               </select> 
             </td>
+            <td>
+              <a href={`${API_BASE_URL}/dutiesReportExcel?year=${this.state.year}&month=${this.state.month}&calId=${this.state.calendarId}`}>&nbsp;Excel отчет</a>
+            </td>
           </tr>
         </table>
       
@@ -223,7 +227,7 @@ class DateRow extends React.Component {
         <tr className="dutydate">
            <td></td>
             {this.props.value.map((val) =>
-              <td>{val}</td>  
+              <td>{val.replace('-','.').replace('-','.')}</td>
             )}
           </tr>  
       );
@@ -252,11 +256,68 @@ class DutyRow extends React.Component {
 class User extends React.Component {
   constructor(props){
     super(props);
+
+    var randomString = require('random-string');
+    const userInfoDivId_ = randomString({length: 20});
+
+    this.state = {
+      open: false,
+      hover: false,
+      userInfoDivId: userInfoDivId_
+    }
+  }
+
+  onOpenUserInfoModal = (divId, userId) => {
+    this.setState({ open: true });
+
+    getUserInfo(userId)
+      .then(response => {             
+          var userInfo = '';
+          
+          userInfo += ('<h3>' + response.lastName + ' ' + response.firstName + '<br/></h3>');
+          userInfo += response.title + '<br/>';
+          userInfo += response.department + '<br/>';
+          userInfo += response.email + '<br/>';          
+          userInfo += response.phone + '<br/>';          
+          userInfo += response.address + '<br/>';
+              
+          document.getElementById(divId).innerHTML = userInfo;
+        }).catch(error => {            
+            notification.error({
+              message: '',
+              description: error.message || 'Sorry! Something went wrong. Please try again!'
+            });            
+        });
+  };
+
+  onCloseUserInfoModal = () => {
+    this.setState({ open: false });
+  };
+
+  mouseOver(){
+    this.setState({hover: true})
+  }
+
+  mouseOut(){
+    this.setState({hover: false})
   }
 
   render() {
-    return(            
-        <td onClick={function() {}}>{this.props.value.name}</td>
+    let td_class = this.state.hover ? "hovered" : "unhovered";
+
+    const { open } = this.state;
+
+    return(         
+        <React.Fragment>         
+            <Modal open={open} onClose={this.onCloseUserInfoModal} center>                                        
+              <div id={this.state.userInfoDivId}></div>  
+            </Modal>     
+
+          <td className={td_class} onMouseOver={this.mouseOver.bind(this)} onMouseOut={this.mouseOut.bind(this)}             
+               onClick={() => this.onOpenUserInfoModal(this.state.userInfoDivId, this.props.value.id)}>
+            {this.props.value.name}
+          </td>
+        </React.Fragment>             
       );
   }
 }
@@ -396,6 +457,7 @@ class DutyItem extends React.Component {
         userId: data.userid,
         date: dateNew,
         dutyType: data.type,
+        dayType: data.dayType,
         calId: data.calid,
       };
 
@@ -406,23 +468,23 @@ class DutyItem extends React.Component {
 
               if(response.dutyID == -1){
                 document.getElementById(tdId).className = 'idle';
-                document.getElementById(divId).className = 'invisible';
-                document.getElementById(divId).textContent = '-';
+                document.getElementById(divId).className = dutyData.dayType == 1 ? '' : 'invisible';
+                document.getElementById(divId).textContent = (dutyData.dayType == 1 ? 'В' : '-');
               }
               else if(dutyData.dutyType == 0){
                 document.getElementById(tdId).className = 'vacation';
                 document.getElementById(divId).className = '';
-                document.getElementById(divId).textContent = 'отпуск';
+                document.getElementById(divId).textContent = (dutyData.dayType == 1 ? 'В отпуск' : 'отпуск')
               }
               else if(dutyData.dutyType == 1){                
                 document.getElementById(tdId).className = 'mainduty';
-                document.getElementById(divId).className = 'invisible';
-                document.getElementById(divId).textContent = '-';
+                document.getElementById(divId).className = dutyData.dayType == 1 ? '' : 'invisible'
+                document.getElementById(divId).textContent = (dutyData.dayType == 1 ? 'В' : '-');
               }
               else if(dutyData.dutyType == 2){
                 document.getElementById(tdId).className = 'secondduty';
-                document.getElementById(divId).className = 'invisible';
-                document.getElementById(divId).textContent = '-';
+                document.getElementById(divId).className = dutyData.dayType == 1 ? '' : 'invisible'
+                document.getElementById(divId).textContent = (dutyData.dayType == 1 ? 'В' : '-');
               }                   
             }
             else{
@@ -478,6 +540,15 @@ class DutyItem extends React.Component {
       text='отпуск';
       textClassName = '';
     }
+
+    if (this.props.value.dayType == 1) {
+      text='В';
+      if (this.props.value.type == 0){
+        text += '  отпуск';
+      }
+
+      textClassName = '';
+    }
        
   const { open } = this.state;
   
@@ -506,19 +577,19 @@ class DutyItem extends React.Component {
               </ContextMenuTrigger>
                 <ContextMenu id={ID}>
                   <MenuItem
-                    data={{type: 1, date: this.props.value.date, id: this.props.value.id, userid: this.props.value.userId, calid: this.props.value.calId, tdId: tdID, oldtype: this.props.value.type, divId: divID}}
+                    data={{type: 1, date: this.props.value.date, id: this.props.value.id, userid: this.props.value.userId, calid: this.props.value.calId, tdId: tdID, oldtype: this.props.value.type, dayType: this.props.value.dayType, divId: divID}}
                     onClick={handleClick}
                     attributes={attributes}>
                       <span className={mainDutyClassName}>&nbsp;</span>&nbsp;Дежурный                      
                   </MenuItem>
                   <MenuItem
-                    data={{type: 2, date: this.props.value.date, id: this.props.value.id, userid: this.props.value.userId, calid: this.props.value.calId, tdId: tdID, oldtype: this.props.value.type, divId: divID}}
+                    data={{type: 2, date: this.props.value.date, id: this.props.value.id, userid: this.props.value.userId, calid: this.props.value.calId, tdId: tdID, oldtype: this.props.value.type, dayType: this.props.value.dayType, divId: divID}}
                     onClick={handleClick}
                     attributes={attributes}>
                       <span className={secondDutyClassName}>&nbsp;</span>&nbsp;Второй дежурный
                   </MenuItem>
                   <MenuItem
-                    data={{type: 0, date: this.props.value.date, id: this.props.value.id, userid: this.props.value.userId, calid: this.props.value.calId, tdId: tdID, oldtype: this.props.value.type, divId: divID}}
+                    data={{type: 0, date: this.props.value.date, id: this.props.value.id, userid: this.props.value.userId, calid: this.props.value.calId, tdId: tdID, oldtype: this.props.value.type, dayType: this.props.value.dayType, divId: divID}}
                     onClick={handleClick}
                     attributes={attributes}>
                     <span className={vacationClassName}>&nbsp;</span>&nbsp;Отпуск
