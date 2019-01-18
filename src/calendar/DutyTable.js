@@ -187,6 +187,7 @@ class DutyTable extends Component {
         <table border="1">          
               <tr>
                 <td></td>
+                <td>Система</td>
                 <td>Понедельник</td>
                 <td>Вторник</td>
                 <td>Среда</td>
@@ -225,6 +226,7 @@ class DateRow extends React.Component {
   render() {
     return(            
         <tr className="dutydate">
+           <td></td>
            <td></td>
             {this.props.value.map((val) =>
               <td>{val.replace('-','.').replace('-','.')}</td>
@@ -317,6 +319,7 @@ class User extends React.Component {
                onClick={() => this.onOpenUserInfoModal(this.state.userInfoDivId, this.props.value.id)}>
             {this.props.value.name}
           </td>
+          <td>{this.props.value.responsibleSystems}</td>
         </React.Fragment>             
       );
   }
